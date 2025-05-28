@@ -1,10 +1,10 @@
-module Expression (Expression(Constant, Variable, Abstraction, Application, Block, Assignment, Definition, Branch), Expression.parser) where
+module Expression (Expression (Constant, Variable, Abstraction, Application, Block, Assignment, Definition, Branch), Expression.parser) where
 
-import Text.ParserCombinators.Parsec
+import Data
 import Data.List
 import JSON
 import Text.JSON
-import Data
+import Text.ParserCombinators.Parsec
 
 data Expression
   = Constant Data
@@ -15,7 +15,7 @@ data Expression
   | Assignment String Expression
   | Definition String Expression
   | Branch Expression Expression Expression
-  deriving Eq
+  deriving (Eq)
 
 ----------
 -- JSON --
@@ -33,12 +33,12 @@ instance JSON Expression where
 instance Show Expression where
   show (Constant dta) = show dta
   show (Variable str) = str
-  show (Abstraction ids expr) = "(lambda ("++(intercalate " " ids)++") "++(show expr)++")"
-  show (Application expr exprs) = "("++(show expr)++(concatMap ((' ':).show) exprs)++")"
-  show (Block expr1 expr2 exprs) = "(begin "++(show expr1)++" "++(show expr2)++(concatMap ((' ':).show) exprs)++")"
-  show (Assignment str expr) = "(set! "++str++" "++(show expr)++")"
-  show (Definition str expr) = "(define "++str++" "++(show expr)++")"
-  show (Branch expr1 expr2 expr3) = "(if "++(show expr1)++" "++(show expr2)++" "++(show expr3)++")"
+  show (Abstraction ids expr) = "(lambda (" ++ (intercalate " " ids) ++ ") " ++ (show expr) ++ ")"
+  show (Application expr exprs) = "(" ++ (show expr) ++ (concatMap ((' ' :) . show) exprs) ++ ")"
+  show (Block expr1 expr2 exprs) = "(begin " ++ (show expr1) ++ " " ++ (show expr2) ++ (concatMap ((' ' :) . show) exprs) ++ ")"
+  show (Assignment str expr) = "(set! " ++ str ++ " " ++ (show expr) ++ ")"
+  show (Definition str expr) = "(define " ++ str ++ " " ++ (show expr) ++ ")"
+  show (Branch expr1 expr2 expr3) = "(if " ++ (show expr1) ++ " " ++ (show expr2) ++ " " ++ (show expr3) ++ ")"
 
 eat = many (space <|> tab <|> newline)
 
@@ -52,68 +52,72 @@ constant = eat >> Data.parser >>= (return . Constant)
 
 variable = identifier >>= (return . Variable)
 
-abstraction = do eat
-                 char '('
-                 eat
-                 string "lambda"
-                 eat
-                 char '('
-                 params <- many identifier
-                 eat
-                 char ')'
-                 body <- expression
-                 eat
-                 char ')'
-                 return $ Abstraction params body
+abstraction = do
+  eat
+  char '('
+  eat
+  string "lambda"
+  eat
+  char '('
+  params <- many identifier
+  eat
+  char ')'
+  body <- expression
+  eat
+  char ')'
+  return $ Abstraction params body
 
+block = do
+  eat
+  char '('
+  eat
+  string "begin"
+  expr1 <- expression
+  expr2 <- expression
+  exprs <- many expression
+  eat
+  char ')'
+  return $ Block expr1 expr2 exprs
 
-block = do eat
-           char '('
-           eat
-           string "begin"
-           expr1 <- expression
-           expr2 <- expression
-           exprs <- many expression
-           eat
-           char ')'
-           return $ Block expr1 expr2 exprs
+assignment = do
+  eat
+  char '('
+  eat
+  string "set!"
+  param <- identifier
+  body <- expression
+  eat
+  char ')'
+  return $ Assignment param body
 
+definition = do
+  eat
+  char '('
+  eat
+  string "define"
+  param <- identifier
+  body <- expression
+  eat
+  char ')'
+  return $ Definition param body
 
-assignment = do eat
-                char '('
-                eat
-                string "set!"
-                param <- identifier
-                body <- expression
-                eat
-                char ')'
-                return $ Assignment param body
+branch = do
+  eat
+  char '('
+  eat
+  string "if"
+  pred <- expression
+  cons <- expression
+  alt <- expression
+  eat
+  char ')'
+  return $ Branch pred cons alt
 
-definition = do eat
-                char '('
-                eat
-                string "define"
-                param <- identifier
-                body <- expression
-                eat
-                char ')'
-                return $ Definition param body
-
-branch = do eat
-            char '('
-            eat
-            string "if"
-            pred <- expression
-            cons <- expression
-            alt <- expression
-            eat
-            char ')'
-            return $ Branch pred cons alt
-
-application = do eat
-                 char '('
-                 proc <- expression
-                 args <- many expression
-                 eat
-                 char ')'
-                 return $ Application proc args
+application = do
+  eat
+  char '('
+  proc <- expression
+  args <- many expression
+  eat
+  char ')'
+  return $ Application proc args

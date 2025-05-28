@@ -1,8 +1,7 @@
+module Data (Data (DNull, DTrue, DFalse, DNumber, DString), parser) where
 
-module Data (Data(DNull, DTrue, DFalse, DNumber, DString), parser) where
-
-import Text.ParserCombinators.Parsec
 import Text.JSON
+import Text.ParserCombinators.Parsec
 
 data Data
   = DNull
@@ -10,15 +9,15 @@ data Data
   | DFalse
   | DNumber Float
   | DString String
-  deriving Eq
+  deriving (Eq)
 
 -------------------
 -- Show & Parsec --
 -------------------
 
 instance Show Data where
-  show DNull  = "#null"
-  show DTrue  = "#t"
+  show DNull = "#null"
+  show DTrue = "#t"
   show DFalse = "#f"
   show (DNumber float) = show float
   show (DString string) = show string
@@ -26,19 +25,23 @@ instance Show Data where
 parser = choice [try dstring, try dnumber, try dnull, try dfalse, try dtrue]
 
 dnull = (string "#null") >> (return DNull)
+
 dtrue = (string "#t") >> (return DTrue)
+
 dfalse = (string "#f") >> (return DFalse)
 
-dstring = do char '"'
-             str <- many (noneOf "\"")
-             char '"'
-             return $ DString str
+dstring = do
+  char '"'
+  str <- many (noneOf "\"")
+  char '"'
+  return $ DString str
 
-dnumber = do sign <- try (char '+') <|> try (char '-') <|> return ' '
-             part1 <- many1 digit
-             char '.'
-             part2 <- many1 digit
-             return $ DNumber $ read $ (sign:part1)++('.':part2)
+dnumber = do
+  sign <- try (char '+') <|> try (char '-') <|> return ' '
+  part1 <- many1 digit
+  char '.'
+  part2 <- many1 digit
+  return $ DNumber $ read $ (sign : part1) ++ ('.' : part2)
 
 ----------
 -- JSON --
